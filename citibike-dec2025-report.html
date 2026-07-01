@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Citi Bike · December 2025</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F8F9FA;
+    --surface: #FFFFFF;
+    --ink: #111827;
+    --muted: #6B7280;
+    --rule: #E5E7EB;
+    --accent: #2563EB;
+    --accent-light: #DBEAFE;
+    --warn: #FEF3C7;
+    --warn-border: #FCD34D;
+    --red: #FEE2E2;
+    --red-border: #FCA5A5;
+    --font: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+  html { background: var(--bg); }
+  body {
+    font-family: var(--font);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 60px 24px 100px;
+  }
+
+  /* HEADER */
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 40px; margin-bottom: 56px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+  h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 12px; }
+  .subtitle { color: var(--muted); font-size: 15px; max-width: 520px; line-height: 1.6; }
+  .hero-stats { display: flex; gap: 40px; margin-top: 36px; flex-wrap: wrap; }
+  .stat-value { font-size: 36px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* SECTIONS */
+  section { margin-bottom: 64px; }
+  .section-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+  .section-num { font-size: 11px; font-weight: 600; color: var(--accent); letter-spacing: 0.1em; min-width: 24px; }
+  h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+  .finding { font-size: 13px; color: var(--muted); margin-bottom: 24px; padding-left: 36px; line-height: 1.6; }
+  .finding strong { color: var(--ink); font-weight: 600; }
+  .chart-wrap { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 24px; }
+  .chart-wrap canvas { display: block; }
+  .takeaway { margin-top: 14px; font-size: 12px; color: var(--muted); padding-left: 12px; border-left: 2px solid var(--accent); font-style: italic; line-height: 1.6; }
+
+  /* ANOMALY CALLOUTS */
+  .anomaly-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 520px) { .anomaly-grid { grid-template-columns: 1fr; } }
+  .anomaly-card { border-radius: 8px; padding: 16px 18px; }
+  .anomaly-card.snow { background: var(--warn); border: 1px solid var(--warn-border); }
+  .anomaly-card.blizzard { background: var(--red); border: 1px solid var(--red-border); }
+  .anomaly-date { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .anomaly-card.snow .anomaly-date { color: #92400E; }
+  .anomaly-card.blizzard .anomaly-date { color: #991B1B; }
+  .anomaly-rides { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .anomaly-card.snow .anomaly-rides { color: #78350F; }
+  .anomaly-card.blizzard .anomaly-rides { color: #7F1D1D; }
+  .anomaly-desc { font-size: 12px; margin-top: 4px; line-height: 1.5; }
+  .anomaly-card.snow .anomaly-desc { color: #92400E; }
+  .anomaly-card.blizzard .anomaly-desc { color: #991B1B; }
+
+  /* STATIONS */
+  .stations-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 560px) { .stations-grid { grid-template-columns: 1fr; } }
+  .station-col { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 20px; }
+  .col-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 16px; }
+  .station-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--rule); gap: 12px; }
+  .station-row:last-child { border-bottom: none; }
+  .station-name { font-size: 13px; font-weight: 500; }
+  .station-count { font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  /* ROUTE */
+  .route-box { background: var(--accent-light); border: 1px solid #BFDBFE; border-radius: 8px; padding: 20px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .route-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); min-width: 72px; }
+  .route-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .route-arrow { color: var(--accent); font-size: 16px; }
+  .route-count { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .route-note { font-size: 12px; color: var(--muted); padding-left: 4px; font-style: italic; line-height: 1.5; }
+
+  /* DONUT PAIR */
+  .donut-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 520px) { .donut-row { grid-template-columns: 1fr; } }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--rule); padding-top: 28px; font-size: 12px; color: var(--muted); line-height: 1.8; }
+  footer strong { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Citi Bike NYC · Data Analysis</div>
+  <h1>December 2025<br>Monthly Ridership Report</h1>
+  <p class="subtitle">A single-month deep-dive into NYC's Citi Bike system — 2.09 million rides, two snowstorms, and a holiday season that reshaped how the city moved.</p>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-value">2.09M</div>
+      <div class="stat-label">Total Rides</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">10.1 min</div>
+      <div class="stat-label">Avg Duration</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">7.5 min</div>
+      <div class="stat-label">Median Duration</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">89.6%</div>
+      <div class="stat-label">Member Share</div>
+    </div>
+  </div>
+</header>
+
+<!-- 01 DAILY RIDERSHIP -->
+<section>
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>Daily Ridership</h2>
+  </div>
+  <p class="finding">Volume peaked on <strong>December 18</strong> (105,312 rides) — the system's busiest day of the month. Two snowstorms produced sharp dips that stand out clearly in the data.</p>
+
+  <div class="anomaly-grid">
+    <div class="anomaly-card snow">
+      <div class="anomaly-date">Dec 14 · First Storm</div>
+      <div class="anomaly-rides">24,146 rides</div>
+      <div class="anomaly-desc">NYC's first significant snowfall of the season — 2.9" in Central Park, 4.6" at JFK. Snow fell through Sunday morning with freezing temperatures following.</div>
+    </div>
+    <div class="anomaly-card blizzard">
+      <div class="anomaly-date">Dec 27 · Major Blizzard</div>
+      <div class="anomaly-rides">12,855 rides</div>
+      <div class="anomaly-desc">NYC's biggest snowstorm in nearly 4 years — 4.3" in Central Park, state of emergency declared. NYC Emergency Management issued a travel advisory.</div>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="dailyChart" height="180"></canvas>
+  </div>
+  <p class="takeaway">The two storm days account for the month's most dramatic dips — Dec 27 saw 88% fewer rides than the Dec 18 peak. Outside of weather events, ridership is remarkably steady at 60–105K per day.</p>
+</section>
+
+<!-- 02 HOURLY PATTERN -->
+<section>
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>When People Ride</h2>
+  </div>
+  <p class="finding">A textbook commuter double-peak: <strong>8am</strong> (149K rides) and <strong>5pm</strong> (179K rides). The system is largely quiet before 6am and winds down after 8pm — a profile driven almost entirely by commuters rather than leisure riders.</p>
+  <div class="chart-wrap">
+    <canvas id="hourlyChart" height="160"></canvas>
+  </div>
+  <p class="takeaway">5pm is 23× busier than 3am. The asymmetry between the morning and evening peaks — evening is notably taller — may reflect e-bike users choosing to ride home even in the cold.</p>
+</section>
+
+<!-- 03 TRIP DURATION -->
+<section>
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>How Long Rides Last</h2>
+  </div>
+  <p class="finding">The median trip is just <strong>7.5 minutes</strong> — shorter than the average (10.1 min), which is pulled up by a long tail of 30+ minute rides. Over half of all trips are under 10 minutes, consistent with short point-to-point urban hops rather than recreational cycling.</p>
+  <div class="chart-wrap">
+    <canvas id="durationChart" height="160"></canvas>
+  </div>
+  <p class="takeaway">Citi Bike in December is largely a "last mile" tool — a connector, not a destination. The 30+ minute cohort (70K rides) likely represents leisure use by the small casual rider segment braving the cold.</p>
+</section>
+
+<!-- 04 MEMBER vs CASUAL -->
+<section>
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>Rider Mix & Bike Type</h2>
+  </div>
+  <p class="finding">Annual members account for <strong>89.6%</strong> of all December rides. E-bikes make up <strong>72.7%</strong> of trips — the motor assist likely makes cold-weather commuting viable for riders who would otherwise skip the ride.</p>
+  <div class="donut-row">
+    <div class="chart-wrap">
+      <canvas id="memberChart" height="220"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="bikeChart" height="220"></canvas>
+    </div>
+  </div>
+  <p class="takeaway">Cold weather is a natural filter: casual and tourist riders largely disappear, leaving a core of committed members. Of those members, nearly 3 in 4 chose the e-bike — electric assist may be what keeps December ridership as high as it is.</p>
+</section>
+
+<!-- 05 STATIONS & ROUTES -->
+<section>
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2>Top Stations & Routes</h2>
+  </div>
+  <p class="finding">The busiest stations cluster around <strong>Chelsea and Midtown</strong>. The most-traveled routes are a pair of reciprocal Long Island City connections — riders going both ways between the same two stations — suggesting a tight local commuter loop in that neighborhood.</p>
+
+  <div class="stations-grid">
+    <div class="station-col">
+      <div class="col-label">Top Start Stations</div>
+      <div class="station-row"><span class="station-name">W 21 St & 6 Ave</span><span class="station-count">8,391</span></div>
+      <div class="station-row"><span class="station-name">6 Ave & W 33 St</span><span class="station-count">7,485</span></div>
+      <div class="station-row"><span class="station-name">W 31 St & 7 Ave</span><span class="station-count">7,414</span></div>
+      <div class="station-row"><span class="station-name">Lafayette St & E 8 St</span><span class="station-count">7,209</span></div>
+      <div class="station-row"><span class="station-name">Broadway & E 14 St</span><span class="station-count">7,170</span></div>
+    </div>
+    <div class="station-col">
+      <div class="col-label">Top End Stations</div>
+      <div class="station-row"><span class="station-name">W 21 St & 6 Ave</span><span class="station-count">8,409</span></div>
+      <div class="station-row"><span class="station-name">W 31 St & 7 Ave</span><span class="station-count">7,530</span></div>
+      <div class="station-row"><span class="station-name">6 Ave & W 33 St</span><span class="station-count">7,508</span></div>
+      <div class="station-row"><span class="station-name">Broadway & E 14 St</span><span class="station-count">7,213</span></div>
+      <div class="station-row"><span class="station-name">Lafayette St & E 8 St</span><span class="station-count">7,197</span></div>
+    </div>
+  </div>
+
+  <div class="route-box">
+    <span class="route-label">#1 Route</span>
+    <span class="route-name">55 Ave & Center Blvd</span>
+    <span class="route-arrow">→</span>
+    <span class="route-name">Vernon Blvd & 50 Ave</span>
+    <span class="route-count">698 trips · Long Island City</span>
+  </div>
+  <div class="route-box" style="background:#F9FAFB; border-color: var(--rule);">
+    <span class="route-label">#2 Route</span>
+    <span class="route-name">Vernon Blvd & 50 Ave</span>
+    <span class="route-arrow">→</span>
+    <span class="route-name">55 Ave & Center Blvd</span>
+    <span class="route-count">640 trips · Long Island City</span>
+  </div>
+  <p class="route-note">Note: Same-station round trips (where start = end) were excluded from route analysis as they likely reflect docking errors or test rides rather than real journeys.</p>
+  <p class="takeaway" style="margin-top: 14px;">The top two routes are mirror images of each other — the same LIC corridor ridden in both directions. This is a textbook commuter signal: the same people, going to work and coming home.</p>
+</section>
+
+<footer>
+  <strong>Data source:</strong> Citi Bike System Data, December 2025 — three CSV files totaling ~2.09M records after filtering trips with zero or negative duration, or trips exceeding 180 minutes (likely undocked bikes).<br>
+  <strong>Methodology:</strong> Files were merged in Python using the csv module. Duration was computed as the difference between <code>started_at</code> and <code>ended_at</code> timestamps. Same-station trips were excluded from route analysis. Anomaly dates (Dec 14, Dec 27) were cross-referenced against NYC Emergency Management press releases and verified news coverage.<br>
+  <strong>Weather sources:</strong> NYC.gov/em press releases (Dec 12 & Dec 24, 2025), Spectrum News NY1 (Dec 14), ABC7/WABC and CBS News NY (Dec 27).<br>
+  <strong>Tools:</strong> Python (data processing &amp; aggregation) · Chart.js 4.4 (visualizations) · HTML/CSS (report layout).<br>
+  <strong>Note:</strong> This is a single-month descriptive analysis. No comparisons to prior years are made; findings reflect December 2025 conditions only.
+</footer>
+
+<script>
+const ACCENT = '#2563EB';
+const ACCENT2 = '#93C5FD';
+const MUTED_C = '#D1D5DB';
+const MUTED = '#9CA3AF';
+const RULE = '#E5E7EB';
+
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.color = MUTED;
+
+// 01 DAILY
+const dailyData = [100621,64888,104313,99835,87734,88716,81525,79448,87371,88955,92205,91394,86981,24146,53036,70819,90330,105312,62392,71158,57797,68577,48402,50812,25484,30121,12855,23485,41152,49390,50915];
+const bgColors = dailyData.map((v, i) => {
+  if (i === 13) return '#FCD34D'; // Dec 14 first storm
+  if (i === 26) return '#FCA5A5'; // Dec 27 blizzard
+  if (i === 24) return '#FDE68A'; // Dec 25 Christmas
+  return ACCENT2;
+});
+
+new Chart(document.getElementById('dailyChart'), {
+  type: 'bar',
+  data: {
+    labels: Array.from({length:31}, (_,i) => i+1),
+    datasets: [{ data: dailyData, backgroundColor: bgColors, borderRadius: 3, borderSkipped: false }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: ctx => {
+            const d = parseInt(ctx[0].label);
+            const labels = {14:'Dec 14 · First Snowstorm', 25:'Dec 25 · Christmas', 27:'Dec 27 · Major Blizzard'};
+            return labels[d] || `Dec ${d}`;
+          },
+          label: ctx => `  ${ctx.raw.toLocaleString()} rides`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, maxTicksLimit: 16 }, title: { display: true, text: 'Day of December 2025', font: { size: 11 }, color: MUTED } },
+      y: { grid: { color: RULE }, border: { display: false }, ticks: { font: { size: 11 }, callback: v => (v/1000).toFixed(0)+'K' } }
+    }
+  }
+});
+
+// 02 HOURLY
+const hourlyData = [28366,16821,10803,7119,7582,19665,48966,98677,149463,109638,94721,100505,113720,123166,136507,151675,159874,178886,159923,119044,87538,68708,56549,42253];
+const hourLabels = Array.from({length:24}, (_,i) => i===0?'12am':i===12?'12pm':i<12?i+'am':(i-12)+'pm');
+
+new Chart(document.getElementById('hourlyChart'), {
+  type: 'line',
+  data: {
+    labels: hourLabels,
+    datasets: [{ data: hourlyData, borderColor: ACCENT, backgroundColor: 'rgba(37,99,235,0.06)', borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.4, fill: true }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `  ${ctx.raw.toLocaleString()} rides` } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, maxTicksLimit: 12 } },
+      y: { grid: { color: RULE }, border: { display: false }, ticks: { font: { size: 11 }, callback: v => (v/1000).toFixed(0)+'K' } }
+    }
+  }
+});
+
+// 03 DURATION
+new Chart(document.getElementById('durationChart'), {
+  type: 'bar',
+  data: {
+    labels: ['< 5 min', '5–10 min', '10–15 min', '15–20 min', '20–30 min', '30+ min'],
+    datasets: [{ data: [594686, 762954, 361642, 168763, 131587, 70537], backgroundColor: [ACCENT2, ACCENT, ACCENT2, ACCENT2, ACCENT2, ACCENT2], borderRadius: 4, borderSkipped: false }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `  ${ctx.raw.toLocaleString()} rides` } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: { grid: { color: RULE }, border: { display: false }, ticks: { font: { size: 11 }, callback: v => (v/1000).toFixed(0)+'K' } }
+    }
+  }
+});
+
+// 04a MEMBER
+new Chart(document.getElementById('memberChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Member', 'Casual'],
+    datasets: [{ data: [1871775, 218394], backgroundColor: [ACCENT, ACCENT2], borderWidth: 0, hoverOffset: 4 }]
+  },
+  options: {
+    responsive: true, cutout: '68%',
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 16, usePointStyle: true } },
+      tooltip: { callbacks: { label: ctx => `  ${ctx.label}: ${ctx.raw.toLocaleString()} (${((ctx.raw/2090169)*100).toFixed(1)}%)` } }
+    }
+  }
+});
+
+// 04b BIKE
+new Chart(document.getElementById('bikeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['E-Bike', 'Classic'],
+    datasets: [{ data: [1518594, 571575], backgroundColor: [ACCENT, MUTED_C], borderWidth: 0, hoverOffset: 4 }]
+  },
+  options: {
+    responsive: true, cutout: '68%',
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 16, usePointStyle: true } },
+      tooltip: { callbacks: { label: ctx => `  ${ctx.label}: ${ctx.raw.toLocaleString()} (${((ctx.raw/2090169)*100).toFixed(1)}%)` } }
+    }
+  }
+});
+</script>
+</body>
+</html>
