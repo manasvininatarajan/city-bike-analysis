@@ -9,7 +9,7 @@ A data analysis report exploring how New Yorkers used Citi Bike through one of t
 - Top stations and most-traveled routes
 - Minimal, chart-driven one-page report built without any charting libraries beyond Chart.js
 
-**Live report:** https://yourname.github.io/citi-bike-analysis/citibike-dec2025-report.html
+**Live report:** https://manasvininatarajan.github.io/city-bike-analysis/
 
 ## Why I built this
 
